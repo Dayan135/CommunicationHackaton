@@ -1,34 +1,45 @@
 import socket
 import struct
 import threading
+from scapy.all import *
+import struct
+
+from scapy.layers.inet import UDP, IP
 
 MAGIC_COOKIE = 0xabcddcba
 MESSAGE_TYPE_OFFER = 0x2
 
 # Function to listen for broadcast messages
-def listen_for_server_offer():
-    print("Listening for server offers...")
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as broadcast_socket:
-        broadcast_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        broadcast_socket.bind(("0.0.0.0", 0))  # Dynamically assign a listening port
+def is_valid_broadcast(packet):
+    """
+    Validates if the packet matches the broadcast message format.
+    """
+    try:
+        # Ensure the packet is UDP and has payload
+        if UDP in packet and Raw in packet:
+            data = packet[Raw].load
+            # Unpack and check the broadcast message structure
+            magic_cookie, message_type, udp_port, tcp_port = struct.unpack("!I B H H", data)
+            if magic_cookie == MAGIC_COOKIE and message_type == MESSAGE_TYPE_OFFER:
+                return packet[IP].src, udp_port, tcp_port
+    except Exception as e:
+        print(f"Error parsing packet: {e}")
+    return None
 
-        while True:
-            data, addr = broadcast_socket.recvfrom(1024)
-            try:
-                # Unpack the broadcast message
-                magic_cookie, message_type, udp_port, tcp_port = struct.unpack("!I B H H", data)
+def sniff_broadcast_packets(timeout=10):
+    """
+    Sniffs the network for broadcast packets matching the server's broadcast format.
+    """
+    print("Sniffing for broadcast packets...")
+    def process_packet(packet):
+        result = is_valid_broadcast(packet)
+        if result:
+            ip, udp_port, tcp_port = result
+            print(f"Received broadcast: UDP Port={udp_port}, TCP Port={tcp_port}")
 
-                # Validate the message
-                if magic_cookie == MAGIC_COOKIE and message_type == MESSAGE_TYPE_OFFER:
-                    print(f"Offer received from {addr[0]}:")
-                    print(f"  Server IP: {addr[0]}")
-                    print(f"  UDP Port: {udp_port}")
-                    print(f"  TCP Port: {tcp_port}")
-                    return addr[0], udp_port, tcp_port
-                else:
-                    print(f"Invalid broadcast message from {addr[0]}")
-            except struct.error:
-                print(f"Malformed message from {addr[0]}")
+    # Sniff UDP packets on the network
+    sniff(filter="udp", prn=process_packet, timeout=timeout)
+
 
 # Function to handle a single TCP connection
 def handle_tcp_connection(server_ip, tcp_port, data_chunk):
@@ -48,7 +59,7 @@ def handle_udp_connection(server_ip, udp_port, data_chunk):
 # Main client function
 def main():
     # Listen for the server's broadcast offer
-    server_ip, udp_port, tcp_port = listen_for_server_offer()
+    server_ip, udp_port, tcp_port = sniff_broadcast_packets()
 
     # User inputs
     file_size = int(input("Enter the file size (in bytes): "))

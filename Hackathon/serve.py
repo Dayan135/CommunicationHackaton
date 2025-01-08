@@ -2,9 +2,28 @@ import socket
 import threading
 import struct
 import time
+import ipaddress
+import netifaces
+
 
 MAGIC_COOKIE = 0xabcddcba
 MESSAGE_TYPE_OFFER = 0x2
+
+def get_broadcast_address():
+    interfaces = netifaces.interfaces()
+    for interface in interfaces:
+        try:
+            # Get network details for each interface
+            details = netifaces.ifaddresses(interface)
+            if netifaces.AF_INET in details:  # Check for IPv4 configuration
+                ipv4_info = details[netifaces.AF_INET][0]
+                ip = ipv4_info['addr']
+                subnet = ipv4_info['netmask']
+                broadcast = ipv4_info['broadcast']
+                return broadcast
+        except KeyError:
+            continue
+    return None
 
 # Thread to handle TCP client connection
 def handle_tcp_client(client_socket):
@@ -36,7 +55,8 @@ def send_udp_broadcast(udp_port, tcp_port, broadcast_port):
 
     magic_cookie = MAGIC_COOKIE
     message_type = MESSAGE_TYPE_OFFER
-    broadcast_address = "255.255.255.255"
+    broadcast_address = get_broadcast_address()
+
 
     while True:
         # Pack the offer message
@@ -63,7 +83,7 @@ def main():
     # Dynamically assign a broadcast port
     broadcast_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     broadcast_socket.bind(("0.0.0.0", 0))  # Let the OS choose a broadcast port
-    broadcast_port = broadcast_socket.getsockname()[1]
+    broadcast_port = broadcast_socket.getsockname()[1] # Get the dynamically assigned UDP broadcast port
     print(f"Broadcasting on port {broadcast_port}")
 
     # Start UDP server handling in a separate thread
@@ -76,6 +96,10 @@ def main():
         client_socket, addr = tcp_server.accept()
         print(f"TCP connection from {addr}")
         threading.Thread(target=handle_tcp_client, args=(client_socket,), daemon=True).start()
+
+
+
+
 
 if __name__ == "__main__":
     main()
