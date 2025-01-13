@@ -32,7 +32,7 @@ def sniff_broadcast_packets(timeout=10):
         result = is_valid_broadcast(packet)
         if result:
             ip, udp_port, tcp_port = result
-            print(f"Received broadcast: IP={ip}, UDP Port={udp_port}, TCP Port={tcp_port}")
+            print(f"Received offer from {ip} (UDP Port={udp_port}, TCP Port={tcp_port})")
             detected_info = {"ip": ip, "udp_port": udp_port, "tcp_port": tcp_port}
             return True
 
