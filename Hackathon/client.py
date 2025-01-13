@@ -20,7 +20,7 @@ def is_valid_broadcast(packet):
             if magic_cookie == MAGIC_COOKIE and message_type == MESSAGE_TYPE_OFFER:
                 return packet[IP].src, udp_port, tcp_port
     except Exception as e:
-        print(f"Error parsing packet: {e}")
+        return None
     return None
 
 def sniff_broadcast_packets(timeout=10):
