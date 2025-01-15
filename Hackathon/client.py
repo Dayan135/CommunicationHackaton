@@ -84,6 +84,7 @@ def handle_udp_connection(server_ip, udp_port, connection_id, file_size):
                     data, _ = udp_socket.recvfrom(BUFFER_SIZE + 21)
                     if len(data) >= 21:
                         cookie, msg_type, total_segments, segment_num = struct.unpack("!IbQQ", data[:21])
+                        print(f"cookie {cookie}, msg_type {msg_type}, total_segments {total_segments}, segment_num{segment_num}")
                         if cookie == MAGIC_COOKIE and msg_type == PAYLOAD_TYPE:
                             received_segments.add(segment_num)
                 except socket.timeout:
