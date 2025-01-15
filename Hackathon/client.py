@@ -81,7 +81,7 @@ def handle_udp_connection(server_ip, udp_port, connection_id, file_size):
             start_time = time.time()
             while True:
                 try:
-                    data, _ = udp_socket.recvfrom(BUFFER_SIZE + 20)
+                    data, _ = udp_socket.recvfrom(BUFFER_SIZE + 21)
                     if len(data) >= 21:
                         cookie, msg_type, total_segments, segment_num = struct.unpack("!IbQQ", data[:21])
                         if cookie == MAGIC_COOKIE and msg_type == PAYLOAD_TYPE:
@@ -93,8 +93,8 @@ def handle_udp_connection(server_ip, udp_port, connection_id, file_size):
             duration = end_time - start_time
             total_segments_expected = total_segments
             packets_received = len(received_segments)
-            packet_loss = 100 * (1 - packets_received / total_segments_expected)
-            speed = packets_received * BUFFER_SIZE * 8 / duration / 1e6
+            packet_loss = (1-(packets_received / total_segments_expected))*100
+            speed = (packets_received * BUFFER_SIZE * 8) /  duration / 1e6
 
             print(f"[UDP {connection_id}] Transfer complete: {packets_received}/{total_segments_expected} packets in {duration:.2f}s, Loss: {packet_loss:.2f}%, Speed: {speed:.2f} Mbps")
     except Exception as e:
